@@ -215,7 +215,13 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
             }
           });
           req.withCredentials = true;
-          req.open('GET', `${realm}?service=${service}&scope=${scope}`);
+          // Replace the hostname in the realm and service with the FQDN of the registry URL (in case a custom domain name is used)
+          let fqdn = this.state.registryUrl.replace(/(^\w+:|^)\/\//, '').replace(/\/$/, '');
+          let realmUrl = new URL(realm);
+          realmUrl.hostname = fqdn;
+          let newRealm = realmUrl.toString();
+          let newService = fqdn;
+          req.open('GET', `${newRealm}?service=${newService}&scope=${scope}`);
           req.send();
         } else {
           onAuthenticated();
