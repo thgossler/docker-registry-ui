@@ -1,0 +1,164 @@
+<registry-authentication>
+    <div if="{ props.opened }" class="dialog-container">
+        <div class="dialog">
+            <h2>Authentication required</h2>
+            <form onsubmit="{ handleAuthentication }">
+                <table>
+                    <tr>
+                        <td>
+                            <label for="username">Username:</label>
+                        </td>
+                        <td>
+                            <input type="text" id="username" bind="state.username" value="{state.username}" oninput="{handleInput}" required autofocus tabindex="1">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label for="password">Password:</label>
+                        </td>
+                        <td>
+                            <input type="password" id="password" bind="state.password" oninput="{handleInput}" required tabindex="2">
+                        </td>
+                    </tr>
+                </table>
+                <div class="dialog-actions">
+                    <button type="submit" tabindex="3">Authenticate</button>
+                    <!--<button type="button" onclick="{ props.onClose }" tabindex="4">Close</button>-->
+                </div>
+            </form>
+            <material-snackbar message="{ state.snackbarMessage }" is-error="{ state.snackbarIsError }"></material-snackbar>
+        </div>
+    </div>
+
+    <script>
+        export default {
+            state: {
+                realm: '',
+                scope: '',
+                service: '',
+                onClose: () => {},
+                onAuthenticated: () => {},
+                opened: false,
+                username: '',
+                password: ''
+            },
+            onBeforeMount(props) {
+                this.updateState(props);
+            },
+            onUpdated(props) {
+                if (props.opened) {
+                    this.updateState(props);
+                }
+            },
+            updateState(props) {
+                this.state = {
+                    realm: props.realm || '',
+                    scope: props.scope || '',
+                    service: props.service || '',
+                    username: props.username || '',
+                    onClose: props.onClose || (() => {}),
+                    onAuthenticated: props.onAuthenticated || (() => {}),
+                    opened: props.opened || false
+                };
+            },
+            handleInput(e) {
+                this.state[e.target.id] = e.target.value;
+            },
+            handleAuthentication(e) {
+                e.preventDefault();
+                if (!this.state.username || !this.state.password) {
+                    return;
+                }
+                this.state.onAuthenticated(this.state.username, this.state.password);
+                this.update({
+                    password: ''
+                });
+            }
+        }
+    </script>
+    <style>
+        .dialog-container {
+            background-color: rgba(0, 0, 0, 0.5);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .dialog {
+            background-color: var(--footer-background, white);
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+            width: 30em;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1em;
+        }
+    
+        .dialog h2 {
+            margin: 0 0 20px 0;
+            font-weight: bold;
+        }
+
+        .dialog form {
+            color: var(--primary-text, black);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dialog table {
+            width: 100%;
+            border: none;
+        }
+
+        #dialog-actions {
+            padding: 10px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dialog label {
+            display: block;
+            margin-bottom: 10px;
+        }
+    
+        .dialog input[type="text"],
+        .dialog input[type="password"] {
+            width: 22em;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid var(--accent-text, gray);
+            border-radius: 5px;
+        }
+    
+        .dialog button[type="submit"] {
+            background-color: var(--accent-text, blue);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    
+        .dialog button[type="button"] {
+            background-color: var(--neutral-text, red);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+    </style>
+</registry-authentication>

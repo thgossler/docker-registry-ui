@@ -4,6 +4,7 @@ sed -i "s~\${REGISTRY_URL}~${REGISTRY_URL}~" index.html
 sed -i "s~\${REGISTRY_TITLE}~${REGISTRY_TITLE}~" index.html
 sed -i "s~\${PULL_URL}~${PULL_URL}~" index.html
 sed -i "s~\${SINGLE_REGISTRY}~${SINGLE_REGISTRY}~" index.html
+sed -i "s~\${SINGLE_REGISTRY_DEFAULT_DATA_REDIRECT_URL}~${SINGLE_REGISTRY_DEFAULT_DATA_REDIRECT_URL}~" index.html
 sed -i "s~\${CATALOG_ELEMENTS_LIMIT}~${CATALOG_ELEMENTS_LIMIT}~" index.html
 sed -i "s~\${SHOW_CONTENT_DIGEST}~${SHOW_CONTENT_DIGEST}~" index.html
 sed -i "s~\${SHOW_TAG_HISTORY}~${SHOW_TAG_HISTORY}~" index.html

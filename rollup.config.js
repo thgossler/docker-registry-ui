@@ -49,7 +49,7 @@ const plugins = [
 ];
 
 if (useServe) {
-  plugins.push(serve({ host: 'localhost', port: 8000, contentBase: [output, './'] }));
+  plugins.push(serve({ host: 'localhost', port: 8080, contentBase: [output, './'] }));
 } else {
   plugins.push(terser({ format: { preamble: license } }));
 }

@@ -86,6 +86,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
         state.image = new DockerImage(props.image, props.tag, {
           list: true,
           registryUrl: props.registryUrl,
+          defaultDataRedirectUrl: props.singleRegistryDefaultDataRedirectUrl,
           onNotify: props.onNotify,
           onAuthentication: props.onAuthentication,
           useControlCacheHeader: props.useControlCacheHeader,
@@ -99,13 +100,14 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
       },
       onTabChanged(arch, idx) {
         const state = this.state;
-        const { registryUrl, onNotify, useControlCacheHeader } = this.props;
+        const { registryUrl, onNotify, useControlCacheHeader, singleRegistryDefaultDataRedirectUrl } = this.props;
         state.elements = [];
         state.image.variants[idx] =
           state.image.variants[idx] ||
           new DockerImage(this.props.image, arch.digest, {
             list: false,
             registryUrl,
+            defaultDataRedirectUrl: singleRegistryDefaultDataRedirectUrl,
             onNotify,
             useControlCacheHeader,
           });

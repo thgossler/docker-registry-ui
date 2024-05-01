@@ -24,8 +24,8 @@
           notify();
         });
         window.addEventListener('keydown', (e) => {
-          // F3 or CTRL + F
-          if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+          // F3 or Ctrl+F or Ctrl+K
+          if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70) || (e.ctrlKey && e.keyCode === 75)) {
             // already focused, fallback to default behavior
             if (document.activeElement === input) {
               return true;
@@ -34,12 +34,22 @@
               input.focus();
             }
           }
+          else if (e.keyCode === 27) {
+            // cancel search
+            input.value = '';
+            notify();
+          }
         });
       },
     };
 
     export function matchSearch(search, value) {
-      return !search || (value && value.toLowerCase().indexOf(search) >= 0);
+      if (!search) return true;
+      if (!value) return false;
+      if (typeof(value) !== 'string') {
+        return value.repo && value.repo.toLowerCase().indexOf(search) >= 0;
+      }
+      return value.toLowerCase().indexOf(search) >= 0;
     }
   </script>
   <style>

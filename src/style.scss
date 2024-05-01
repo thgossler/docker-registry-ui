@@ -58,6 +58,16 @@ body {
   word-break: break-all;
 }
 
+material-navbar a {
+  color: var(--header-text);
+  text-decoration: none;
+}
+
+.username {
+  align-content: center;
+  padding-right: 2em;
+}
+
 .material-card-title-action a {
   color: inherit;
   text-decoration: none;

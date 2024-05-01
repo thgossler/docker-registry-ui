@@ -18,7 +18,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
   <!-- Begin of tag -->
   <div
     class="content"
-    if="{!props.filterResults || state.nImages > 0 || matchSearch(props.filterResults, state.image)}"
+    if="{!props.filterResults || (state.image && matchSearch(props.filterResults, state.image)) || (state.nImages > 0 && state.images.some(i => matchSearch(props.filterResults, i)))}"
   >
     <material-card
       class="list highlight"
@@ -31,7 +31,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
       </a>
       <material-waves if="{ state.images }" center="true" color="#ddd"></material-waves>
       <span>
-        <i class="material-icons">send</i>
+        <i class="material-icons">folder</i>
         { state.image || state.repo }
         <div if="{state.images}" class="item-count right">
           { state.nImages } images
@@ -47,7 +47,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
       if="{ state.images }"
       filter-results="{ props.filterResults }"
       registry-url="{ props.registryUrl }"
-      on-notify="{ props.onnNotify }"
+      on-notify="{ props.onNotify }"
       on-authentication="{ props.onAuthentication }"
       show-catalog-nb-tags="{ props.showCatalogNbTags }"
       is-registry-secured="{ props.isRegistrySecured }"

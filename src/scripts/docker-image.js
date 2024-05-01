@@ -17,6 +17,7 @@
 import { Http } from './http.js';
 import { eventTransfer, ERROR_CAN_NOT_READ_CONTENT_DIGEST } from './utils.js';
 import observable from '@riotjs/observable';
+import { transformUrlToCustomDomain } from './custom-domain.js';
 
 export const supportListManifest = (response) => {
   if (response.mediaType === 'application/vnd.docker.distribution.manifest.list.v2+json') {
@@ -42,13 +43,14 @@ export const platformToString = (platform) => {
 };
 
 export class DockerImage {
-  constructor(name, tag, { list, registryUrl, onNotify, onAuthentication, useControlCacheHeader, isRegistrySecured }) {
+  constructor(name, tag, { list, registryUrl, defaultDataRedirectUrl, onNotify, onAuthentication, useControlCacheHeader, isRegistrySecured }) {
     this.name = name;
     this.tag = tag;
     this.chars = 0;
     this.opts = {
       list,
       registryUrl,
+      defaultDataRedirectUrl,
       onNotify,
       onAuthentication,
       useControlCacheHeader,
@@ -176,6 +178,9 @@ export class DockerImage {
       } else if (this.status === 404) {
         self.opts.onNotify(`Blobs for ${self.name}:${self.tag} not found: blob '${self.blobs}'`, true);
       } else if (!this.responseText) {
+        if (this.status === 0) {
+          console.error('Request possibly failed due to CORS issue.');
+        }
         self.opts.onNotify(
           `Can"t get blobs for ${self.name}:${self.tag}: blob '${self.blobs}' (no message error)`,
           true
@@ -184,11 +189,55 @@ export class DockerImage {
         self.opts.onNotify(this.responseText);
       }
     });
-    oReq.open('GET', `${this.opts.registryUrl}/v2/${self.name}/blobs/${blob}`);
-    oReq.setRequestHeader(
-      'Accept',
-      'application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json'
-    );
-    oReq.send();
+
+    // Test by using fetch if the a GET request to this URL will be redirected and if so,
+    // update to the redirect URL proactively (otherwise the request will fail because 
+    // of CORS and a lack of custom domain support in some container registry implementations)
+    let url = `${this.opts.registryUrl}/v2/${self.name}/blobs/${blob}`;
+    let processResponse = (response, error, token) => {
+      if (error) {
+        console.error('Error:', error);
+        console.log('Assuming redirect to a data endpoint failed due to CORS, trying to fetch the default data URL directly');
+        url = transformUrlToCustomDomain(this.opts.defaultDataRedirectUrl, url, true);
+      }
+      else if (response.redirected) {
+        url = transformUrlToCustomDomain(response.url, this.opts.registryUrl);
+      }
+      // TODO: In the good case, the previous request was successful and we should not request the blob again (change to XMLHttpRequest instead of fetch)
+      oReq.open('GET', url);
+      oReq.setRequestHeader(
+        'Accept',
+        'application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json'
+      );
+      if (token) {
+        oReq.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      oReq.send();
+    };
+    fetch(url).then((response) => {
+      if (response.status === 401) {
+        if (this.opts.onAuthentication) {
+          const tokenAuth = oReq.parseAuthenticateHeader(response.headers.get('www-authenticate'));
+          this.opts.onAuthentication(tokenAuth, (bearer) => {
+            fetch(url, {
+              headers: { Authorization: `Bearer ${bearer.access_token}` }
+            }).then((response) => {
+              processResponse(response, null, bearer.access_token);
+            })
+            .catch((error) => {
+              processResponse(null, error, bearer.access_token);
+            });
+          });
+        }
+        else {
+          console.error('Authentication required but no authentication handler provided');
+        }
+      } else {
+        processResponse(response);
+      }
+    })
+    .catch((error) => {
+      processResponse(null, error);  
+    });
   }
 }

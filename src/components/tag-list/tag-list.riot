@@ -121,6 +121,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
                   new DockerImage(props.image, tag, {
                     list: true,
                     registryUrl: props.registryUrl,
+                    defaultDataRedirectUrl: props.singleRegistryDefaultDataRedirectUrl,
                     onNotify: props.onNotify,
                     onAuthentication: props.onAuthentication,
                     useControlCacheHeader: props.useControlCacheHeader,

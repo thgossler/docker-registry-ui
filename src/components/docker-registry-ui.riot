@@ -18,10 +18,11 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
   <header>
     <material-navbar>
       <span class="logo">
-        <span>Docker Registry UI</span>
+        <a href="{ state.homepageUrl || '' }"><span>{ props.singleRegistry ? state.name : "Docker Registry UI" }</span></a>
         <version-notification version="{ latest }" on-notify="{ notifySnackbar }"></version-notification>
       </span>
       <div class="menu">
+        <a href="" class="username" onclick={ logout } title="Logout"><span>{ state.authenticationDialogOpened ? '' : state.username || '' }</span></a>
         <search-bar on-search="{ onSearch }"></search-bar>
         <dialogs-menu
           if="{props.singleRegistry !== 'true'}"
@@ -70,6 +71,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
           registry-url="{ state.registryUrl }"
           registry-name="{ state.name }"
           pull-url="{ state.pullUrl }"
+          single-registry-default-data-redirect-url="{ props.singleRegistryDefaultDataRedirectUrl }"
           image="{ router.getTagListImage() }"
           show-content-digest="{ truthy(props.showContentDigest) }"
           show-tag-history="{ falsy(props.showTagHistory) }"
@@ -88,6 +90,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
           registry-url="{ state.registryUrl }"
           registry-name="{ state.name }"
           pull-url="{ state.pullUrl }"
+          single-registry-default-data-redirect-url="{ props.singleRegistryDefaultDataRedirectUrl }"
           image="{ router.getTagHistoryImage() }"
           tag="{ router.getTagHistoryTag() }"
           is-image-remove-activated="{ truthy(props.isImageRemoveActivated) }"
@@ -103,6 +106,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
       realm="{ state.realm }"
       scope="{ state.scope }"
       service="{ state.service }"
+      username="{ state.username }"
       on-close="{ onAuthenticationClose }"
       on-authenticated="{ state.onAuthenticated }"
       opened="{ state.authenticationDialogOpened }"
@@ -144,9 +148,11 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
     import TagList from './tag-list/tag-list.riot';
     import TagHistory from './tag-history/tag-history.riot';
     import DialogsMenu from './dialogs/dialogs-menu.riot';
+    import RegistryAuthentication from './dialogs/registry-authentication.riot';
     import SearchBar from './search-bar.riot';
     import ErrorPage from './error-page.riot';
     import VersionNotification from './version-notification.riot';
+    import { transformUrlToCustomDomain } from '../scripts/custom-domain';
     import { stripHttps, getRegistryServers, setRegistryServers, truthy, falsy, stringToArray } from '../scripts/utils';
     import router from '../scripts/router';
     import { loadTheme } from '../scripts/theme';
@@ -157,6 +163,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
         TagList,
         TagHistory,
         DialogsMenu,
+        RegistryAuthentication,
         SearchBar,
         Router,
         Route,
@@ -193,6 +200,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
         this.state.useControlCacheHeader = props.useControlCacheHeader;
         const theme = loadTheme(props, this.root.parentNode.style);
         this.state.themeSwitch = theme === 'dark';
+        this.state.homepageUrl = window.location.origin + window.location.pathname;
       },
       onServerChange(registryUrl) {
         this.update({
@@ -202,30 +210,81 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
           snackbarMessage: 'Registry server changed to `' + registryUrl + '`.',
         });
       },
-      onAuthentication(opts, onAuthenticated) {
+      onAuthentication(opts, onAuthenticatedCallback) {
         if (opts && opts.realm && opts.service && opts.scope) {
-          const { realm, service, scope } = opts;
+          let { realm, service, scope } = opts;
+
+          // Transform the realm URL to the configured registry domain name (may be a custom domain name)
+          realm = transformUrlToCustomDomain(realm, this.state.registryUrl);
+
+          // If username and password are available don't ask again
+          if (this.state.credentials) {
+            this.getToken(realm, service, scope, this.state.credentials).then((b) => {
+              onAuthenticatedCallback(b);
+            }).catch((e) => {
+              //notifySnackbar(`Failed to authorize: ${e.message}`, true);
+              console.error(e);
+            });
+          }
+          else {
+            // Open the authentication dialog
+            this.update({
+              realm,
+              service,
+              scope,
+              authenticationDialogOpened: true,
+              onAuthenticated: (username, password) => {
+                let creds = this.createCredentials(username, password);
+                this.update({
+                  authenticationDialogOpened: false,
+                  username,
+                  credentials: creds,
+                });
+                this.getToken(realm, service, scope, creds).then((b) => {
+                  onAuthenticatedCallback(b);
+                }).catch((e) => {
+                  notifySnackbar(`Failed to log-in: ${e.message}`, true);
+                  // this.update({
+                  //   credentials: undefined,
+                  // });
+                });
+              },
+            });
+          }
+        } else {
+          onAuthenticatedCallback();
+        }
+      },
+      createCredentials(username, password) {
+        return () => {
+          return btoa(username + ':' + password);
+        };
+      },
+      logout() {
+        this.update({
+          credentials: '',
+        });
+        if (window.location.hash === '') {
+          window.location.hash = ' '; // ensure the hash is different to enforce a reload
+        }
+        window.location.hash = '';
+      },
+      getToken(realm, service, scope, credentials) {
+        return new Promise((resolve, reject) => {
           const req = new XMLHttpRequest();
           req.addEventListener('loadend', () => {
             try {
               const bearer = JSON.parse(req.responseText);
-              onAuthenticated(bearer);
+              resolve(bearer);
             } catch (e) {
-              this.notifySnackbar(`Failed to log in: ${e.message}`, true);
+              reject(e);
             }
           });
           req.withCredentials = true;
-          // Replace the hostname in the realm and service with the FQDN of the registry URL (in case a custom domain name is used)
-          let fqdn = this.state.registryUrl.replace(/(^\w+:|^)\/\//, '').replace(/\/$/, '');
-          let realmUrl = new URL(realm);
-          realmUrl.hostname = fqdn;
-          let newRealm = realmUrl.toString();
-          let newService = fqdn;
-          req.open('GET', `${newRealm}?service=${newService}&scope=${scope}`);
+          req.open('GET', `${realm}?service=${service}&scope=${scope}`);
+          req.setRequestHeader('Authorization', 'Basic ' + credentials());
           req.send();
-        } else {
-          onAuthenticated();
-        }
+        });
       },
       onAuthenticationClose() {
         this.update({

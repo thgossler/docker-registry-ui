@@ -18,12 +18,12 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
   <material-card ref="catalog-tag" class="catalog header">
     <div class="material-card-title-action">
       <h2>
-        Repositories of { state.registryName }
+        Repositories <span>{ props.singleRegistry ? "of " + state.registryName : '' }</span>
         <div class="item-count">{ state.nImages } images in { state.nRepositories } repositories</div>
       </h2>
     </div>
   </material-card>
-  <div if="{ !state.loadend }" class="spinner-wrapper">
+  <div if="{ !state.authenticating && !state.loadend }" class="spinner-wrapper">
     <material-spinner></material-spinner>
   </div>
   <catalog-element
@@ -52,7 +52,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
         registryName: '',
         length: 0,
         loadend: false,
+        authenticating: false,
         repositories: [],
+        nRepositories: 0,
+        nImages: 0,
         registryUrl: '',
       },
 
@@ -71,6 +74,15 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
       onUpdated(props, state) {
         this.display(props, state);
       },
+      onAuthentication(opts, onAuthenticatedCallback) {
+        const self = this;
+        this.update({ authenticating: true });
+        let authCallback = (b) => {
+          onAuthenticatedCallback(b);
+          self.update({ authenticating: false });
+        };
+        this.props.onAuthentication(opts, authCallback);
+      },
       display(props, state) {
         if (props.registryUrl === state.registryUrl) {
           return;
@@ -81,7 +93,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
         const self = this;
         const catalogUrl = `${props.registryUrl}/v2/_catalog?n=${state.catalogElementsLimit}`;
         const oReq = new Http({
-          onAuthentication: this.props.onAuthentication,
+          onAuthentication: this.onAuthentication,
           withCredentials: props.isRegistrySecured,
         });
         oReq.addEventListener('load', function () {
