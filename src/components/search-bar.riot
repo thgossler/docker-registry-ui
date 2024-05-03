@@ -12,16 +12,26 @@
       onMounted(props, state) {
         const input = this.$('input');
         let value = '';
-        const notify = () => {
-          if (value !== input.value) {
-            props.onSearch(input.value.toLowerCase());
+        let timeoutId = null;
+        const notify = (timeoutMsecs) => {
+          if (!timeoutMsecs || timeoutMsecs < 0 || typeof(timeoutMsecs) !== 'number') {
+            timeoutMsecs = 500;
           }
-          value = input.value;
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          timeoutId = setTimeout(() => {
+            if (input.value !== value) {
+              props.onSearch(input.value.toLowerCase());
+            }
+            value = input.value;
+            timeoutId = null;
+          }, timeoutMsecs);
         };
         input.addEventListener('keyup', notify);
         router.on.value(() => {
           input.value = '';
-          notify();
+          notify(0);
         });
         window.addEventListener('keydown', (e) => {
           // F3 or Ctrl+F or Ctrl+K
@@ -37,7 +47,7 @@
           else if (e.keyCode === 27) {
             // cancel search
             input.value = '';
-            notify();
+            notify(0);
           }
         });
       },

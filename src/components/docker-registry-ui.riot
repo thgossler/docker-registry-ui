@@ -71,7 +71,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
           registry-url="{ state.registryUrl }"
           registry-name="{ state.name }"
           pull-url="{ state.pullUrl }"
-          single-registry-default-data-redirect-url="{ props.singleRegistryDefaultDataRedirectUrl }"
           image="{ router.getTagListImage() }"
           show-content-digest="{ truthy(props.showContentDigest) }"
           show-tag-history="{ falsy(props.showTagHistory) }"
@@ -90,7 +89,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
           registry-url="{ state.registryUrl }"
           registry-name="{ state.name }"
           pull-url="{ state.pullUrl }"
-          single-registry-default-data-redirect-url="{ props.singleRegistryDefaultDataRedirectUrl }"
           image="{ router.getTagHistoryImage() }"
           tag="{ router.getTagHistoryTag() }"
           is-image-remove-activated="{ truthy(props.isImageRemoveActivated) }"
@@ -103,7 +101,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
       </route>
     </router>
     <registry-authentication
-      realm="{ state.realm }"
+      realm="{ state.proxyPassUrl && state.realm ? state.realm.replace(state.proxyPassUrl, state.registryUrl) : state.realm }"
       scope="{ state.scope }"
       service="{ state.service }"
       username="{ state.username }"
@@ -152,7 +150,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
     import SearchBar from './search-bar.riot';
     import ErrorPage from './error-page.riot';
     import VersionNotification from './version-notification.riot';
-    import { transformUrlToCustomDomain } from '../scripts/custom-domain';
     import { stripHttps, getRegistryServers, setRegistryServers, truthy, falsy, stringToArray } from '../scripts/utils';
     import router from '../scripts/router';
     import { loadTheme } from '../scripts/theme';
@@ -194,6 +191,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
           (props.singleRegistry === 'true' ? undefined : router.getUrlQueryParam() || getRegistryServers(0)) ||
           window.location.origin + window.location.pathname.replace(/\/+$/, '');
         this.state.registryUrl = registryUrl.replace(/\/$/, '').replace(/index(\.html?)?$/, '');
+        this.state.proxyPassUrl = props.proxyPassUrl;
         this.state.name = props.name || stripHttps(props.registryUrl);
         this.state.catalogElementsLimit = props.catalogElementsLimit || 1000;
         this.state.pullUrl = this.pullUrl(this.state.registryUrl, props.pullUrl);
@@ -213,9 +211,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
       onAuthentication(opts, onAuthenticatedCallback) {
         if (opts && opts.realm && opts.service && opts.scope) {
           let { realm, service, scope } = opts;
-
-          // Transform the realm URL to the configured registry domain name (may be a custom domain name)
-          realm = transformUrlToCustomDomain(realm, this.state.registryUrl);
 
           // If username and password are available don't ask again
           if (this.state.credentials) {
@@ -243,7 +238,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
                 this.getToken(realm, service, scope, creds).then((b) => {
                   onAuthenticatedCallback(b);
                 }).catch((e) => {
-                  notifySnackbar(`Failed to log-in: ${e.message}`, true);
+                  console.error(e);
+                  this.notifySnackbar(`Failed to log-in: ${e.message}`, true);
                   // this.update({
                   //   credentials: undefined,
                   // });
@@ -270,6 +266,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
         window.location.hash = '';
       },
       getToken(realm, service, scope, credentials) {
+        const self = this;
         return new Promise((resolve, reject) => {
           const req = new XMLHttpRequest();
           req.addEventListener('loadend', () => {
@@ -281,6 +278,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
             }
           });
           req.withCredentials = true;
+          realm = self.state.proxyPassUrl && realm ? realm.replace(self.state.proxyPassUrl, self.state.registryUrl) : realm;
           req.open('GET', `${realm}?service=${service}&scope=${scope}`);
           req.setRequestHeader('Authorization', 'Basic ' + credentials());
           req.send();

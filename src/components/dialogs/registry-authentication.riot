@@ -1,7 +1,7 @@
 <registry-authentication>
     <div if="{ props.opened }" class="dialog-container">
         <div class="dialog">
-            <h2>Authentication required</h2>
+            <h2>Authentication</h2>
             <form onsubmit="{ handleAuthentication }">
                 <table>
                     <tr>
@@ -22,8 +22,7 @@
                     </tr>
                 </table>
                 <div class="dialog-actions">
-                    <button type="submit" tabindex="3">Authenticate</button>
-                    <!--<button type="button" onclick="{ props.onClose }" tabindex="4">Close</button>-->
+                    <button type="submit" tabindex="3">Sign in</button>
                 </div>
             </form>
             <material-snackbar message="{ state.snackbarMessage }" is-error="{ state.snackbarIsError }"></material-snackbar>
@@ -96,8 +95,8 @@
             width: 30em;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            justify-content: left;
+            align-items: left;
             padding: 1em;
         }
     
@@ -124,13 +123,18 @@
             padding: 10px;
             display: flex;
             flex-direction: row;
-            align-items: center;
-            justify-content: center;
+            align-items: right;
+            justify-content: right;
         }
 
         .dialog label {
             display: block;
             margin-bottom: 10px;
+            margin-right: 20px;
+        }
+
+        .dialog table tr {
+            vertical-align: text-bottom;
         }
     
         .dialog input[type="text"],
@@ -149,16 +153,6 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-        }
-    
-        .dialog button[type="button"] {
-            background-color: var(--neutral-text, red);
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-left: 10px;
         }
     </style>
 </registry-authentication>

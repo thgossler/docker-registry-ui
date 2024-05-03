@@ -31,6 +31,7 @@
     
     <docker-registry-ui
       registry-url="${REGISTRY_URL}"
+      proxy-pass-url="${PROXY_PASS_URL}"
       name="${REGISTRY_TITLE}"
       pull-url="${PULL_URL}"
       show-content-digest="${SHOW_CONTENT_DIGEST}"
@@ -38,7 +39,6 @@
       is-image-remove-activated="${DELETE_IMAGES}"
       catalog-elements-limit="${CATALOG_ELEMENTS_LIMIT}"
       single-registry="${SINGLE_REGISTRY}"
-      single-registry-default-data-redirect-url="${SINGLE_REGISTRY_DEFAULT_DATA_REDIRECT_URL}"
       default-registries="${DEFAULT_REGISTRIES}"
       read-only-registries="${READ_ONLY_REGISTRIES}"
       show-catalog-nb-tags="${SHOW_CATALOG_NB_TAGS}"

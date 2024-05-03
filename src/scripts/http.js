@@ -26,7 +26,6 @@ export class Http {
     this._headers = {};
     this.onAuthentication = opts && opts.onAuthentication;
     this.withCredentials = opts && opts.withCredentials;
-    this.parseAuthenticateHeader = parseAuthenticateHeader;
   }
 
   getContentDigest(cb) {

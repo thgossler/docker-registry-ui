@@ -86,7 +86,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
         state.image = new DockerImage(props.image, props.tag, {
           list: true,
           registryUrl: props.registryUrl,
-          defaultDataRedirectUrl: props.singleRegistryDefaultDataRedirectUrl,
           onNotify: props.onNotify,
           onAuthentication: props.onAuthentication,
           useControlCacheHeader: props.useControlCacheHeader,
@@ -100,14 +99,13 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
       },
       onTabChanged(arch, idx) {
         const state = this.state;
-        const { registryUrl, onNotify, useControlCacheHeader, singleRegistryDefaultDataRedirectUrl } = this.props;
+        const { registryUrl, onNotify, useControlCacheHeader } = this.props;
         state.elements = [];
         state.image.variants[idx] =
           state.image.variants[idx] ||
           new DockerImage(this.props.image, arch.digest, {
             list: false,
             registryUrl,
-            defaultDataRedirectUrl: singleRegistryDefaultDataRedirectUrl,
             onNotify,
             useControlCacheHeader,
           });
@@ -132,11 +130,13 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
           }
           return guiElements.sort(eltSort);
         }
-        const elements = new Array(blobs.history.length + 1);
+        const elements = new Array(blobs.history ? blobs.history.length + 1 : 1);
         elements[0] = exec(getConfig(blobs, { historyCustomLabels }));
-        blobs.history.forEach(function (elt, i) {
-          elements[blobs.history.length - i] = exec(elt);
-        });
+        if (blobs.history) {
+          blobs.history.forEach(function (elt, i) {
+            elements[blobs.history.length - i] = exec(elt);
+          });
+        }
         this.update({
           elements,
           loadend: true,
@@ -256,7 +256,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
         'id',
         'ExposedPorts',
       ].reduce(function (acc, e) {
-        const value = blobs[e] || blobs.config[e];
+        const value = undefined;
+        try {
+          value = blobs[e] || blobs.config[e];
+        } catch (err) {}
         if (value && e === 'architecture' && blobs.variant) {
           acc[e] = value + blobs.variant;
         } else if (value) {
